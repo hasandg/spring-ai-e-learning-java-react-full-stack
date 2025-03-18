@@ -15,7 +15,6 @@
     <description>Backend services for video e-learning platform</description>
     <modules>
         <module>ai-service</module>
-        <module>auth-service</module>
         <module>course-service</module>
         <module>user-service</module>
         <module>video-service</module>
@@ -38,12 +37,31 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>3.2.3</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Spring Cloud Dependencies -->
+            <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
                 <version>${spring-cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!-- Add Keycloak BOM -->
+            <dependency>
+                <groupId>org.keycloak.bom</groupId>
+                <artifactId>keycloak-adapter-bom</artifactId>
+                <version>21.1.1</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            
             <dependency>
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-openai-spring-boot-starter</artifactId>

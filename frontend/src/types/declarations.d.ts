@@ -7,12 +7,6 @@ declare module 'redux-logger';
 declare module 'match-sorter';
 declare module '@stomp/stompjs';
 declare module 'notistack';
-declare module 'react-pdf';
-declare module 'react-pdf/dist/esm/entry.webpack';
-declare module 'chart.js';
-declare module 'react-chartjs-2';
-declare module 'react-dnd';
-declare module 'react-dnd-html5-backend';
 declare module 'keycloak-js';
 
 // React and Material UI components

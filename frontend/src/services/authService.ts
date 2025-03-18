@@ -1,14 +1,16 @@
 import Keycloak, { KeycloakInstance } from 'keycloak-js';
 
-const KEYCLOAK_URL = process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost:8091';
+const KEYCLOAK_URL = process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost:8090';
 const REALM = process.env.NEXT_PUBLIC_KEYCLOAK_REALM || 'elearning';
 const CLIENT_ID = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || 'frontend';
+const CLIENT_SECRET = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_SECRET || '';
 
 // Initialize Keycloak instance
 const keycloakConfig = {
   url: KEYCLOAK_URL,
   realm: REALM,
   clientId: CLIENT_ID
+  // Public client doesn't need credentials
 };
 
 let keycloak: any = null;

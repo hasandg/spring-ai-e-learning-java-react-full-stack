@@ -65,14 +65,14 @@ const LoginPage = () => {
   }, [router]);
 
   const validationSchema = Yup.object({
-    email: Yup.string().email('Geçerli bir e-posta adresi giriniz').required('E-posta adresi zorunludur'),
+    email: Yup.string().required('Kullanıcı adı veya e-posta adresi zorunludur'),
     password: Yup.string().required('Şifre zorunludur')
   })
 
   const formik = useFormik({
     initialValues: {
-      email: 'test@example.com',
-      password: 'password123'
+      email: 'test',
+      password: 'testpass123'
     },
     validationSchema,
     onSubmit: async (values) => {
@@ -114,6 +114,10 @@ const LoginPage = () => {
           // Store tokens (this should match your auth service implementation)
           localStorage.setItem('auth_token', data.token);
           localStorage.setItem('refresh_token', data.refreshToken);
+          
+          // Also set the token as a cookie for middleware
+          document.cookie = `token=${data.token}; path=/; max-age=${data.expiresIn}`;
+          
           if (data.user) {
             localStorage.setItem('user', JSON.stringify(data.user));
           }
@@ -126,9 +130,11 @@ const LoginPage = () => {
           }));
           
           // Redirect to dashboard
+          console.log('Setting up redirect timeout...');
           setTimeout(() => {
-            router.push('/');
-          }, 1000);
+            console.log('Redirect timeout triggered, redirecting now...');
+            window.location.href = 'http://localhost:3000/';
+          }, 2000);
         } catch (err) {
           console.error('Login API error:', err);
           throw err;
@@ -176,7 +182,7 @@ const LoginPage = () => {
               fullWidth
               id="email"
               name="email"
-              label="E-posta Adresi"
+              label="Kullanıcı Adı veya E-posta"
               value={formik.values.email}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}

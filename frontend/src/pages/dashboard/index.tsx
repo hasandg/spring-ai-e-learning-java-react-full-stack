@@ -14,10 +14,8 @@ import {
   CalendarMonth as CalendarIcon,
   TrendingUp as TrendingUpIcon,
 } from '@mui/icons-material';
-import { Line } from 'react-chartjs-2';
 import { useTranslation } from 'react-i18next';
 import MainLayout from '@/components/layout/MainLayout';
-import { lineChartOptions, chartColors } from '@/config/charts';
 
 const DashboardPage: React.FC = () => {
   const theme = useTheme();
@@ -49,19 +47,6 @@ const DashboardPage: React.FC = () => {
       color: theme.palette.success.main,
     },
   ];
-
-  const progressData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [
-      {
-        label: t('dashboard.learningProgress'),
-        data: [65, 70, 75, 72, 78, 75],
-        borderColor: chartColors.primary[0],
-        backgroundColor: chartColors.primary[1],
-        tension: 0.4,
-      },
-    ],
-  };
 
   return (
     <MainLayout>
@@ -130,8 +115,10 @@ const DashboardPage: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 {t('dashboard.learningProgress')}
               </Typography>
-              <Box sx={{ height: 300 }}>
-                <Line data={progressData} options={lineChartOptions} />
+              <Box sx={{ height: 300, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <Typography variant="body1" color="text.secondary">
+                  Learning progress chart has been removed (chart.js dependency removed)
+                </Typography>
               </Box>
             </CardContent>
           </Card>

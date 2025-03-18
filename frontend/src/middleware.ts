@@ -41,12 +41,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // DEVELOPMENT BYPASS: In development, allow access to all routes for easy testing
-  if (isDev) {
-    // For development testing, we'll bypass authentication checks
-    console.log(`[DEV MODE] Bypassing auth check for: ${pathname}`);
-    return NextResponse.next();
-  }
+  // DEVELOPMENT BYPASS REMOVED - We now apply authentication checks in all environments
+  // Only uncomment if you need to bypass for testing specific features
+  // if (isDev) {
+  //   console.log(`[DEV MODE] Bypassing auth check for: ${pathname}`);
+  //   return NextResponse.next();
+  // }
 
   // Check if the path requires authentication
   if (!token) {

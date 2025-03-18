@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost:8090';
     const realm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM || 'elearning';
     const clientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || 'frontend';
-    const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET; // Optional, if your client is confidential
+    const clientSecret = process.env.KEYCLOAK_CLIENT_SECRET || process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_SECRET || 'NGpcMviGKgg7udGoqkiOmOUSfhvMyDJ6'; // Try both env vars
 
     console.log('Login attempt with:', { 
       keycloakUrl, 
@@ -67,9 +67,7 @@ export async function POST(request: Request) {
     const formData = new URLSearchParams();
     formData.append('grant_type', 'password');
     formData.append('client_id', clientId);
-    if (clientSecret) {
-      formData.append('client_secret', clientSecret);
-    }
+    formData.append('scope', 'openid email profile');
     
     // First try with username
     if (username) {
@@ -100,9 +98,7 @@ export async function POST(request: Request) {
         const emailFormData = new URLSearchParams();
         emailFormData.append('grant_type', 'password');
         emailFormData.append('client_id', clientId);
-        if (clientSecret) {
-          emailFormData.append('client_secret', clientSecret);
-        }
+        emailFormData.append('scope', 'openid email profile');
         emailFormData.append('username', email);
         emailFormData.append('password', password);
         
@@ -147,20 +143,34 @@ async function handleSuccessfulLogin(data: any, keycloakUrl: string, realm: stri
       },
     });
 
-    const userInfo = await userInfoResponse.json();
-    console.log('Login successful, user info retrieved');
+    // Check if response is ok
+    if (!userInfoResponse.ok) {
+      console.error('User info endpoint returned error:', userInfoResponse.status, userInfoResponse.statusText);
+      throw new Error(`Failed to fetch user info: ${userInfoResponse.status}`);
+    }
 
+    // Check for empty response
+    const responseText = await userInfoResponse.text();
+    if (!responseText) {
+      console.error('User info endpoint returned empty response');
+      throw new Error('Empty response from user info endpoint');
+    }
+
+    // Now parse JSON
+    const userInfo = JSON.parse(responseText);
+    console.log('Login successful, user info retrieved');
+    
     // Return tokens and user info to the client
     return NextResponse.json({
       token: data.access_token,
       refreshToken: data.refresh_token,
       expiresIn: data.expires_in,
       user: {
-        id: userInfo.sub,
-        username: userInfo.preferred_username,
-        email: userInfo.email,
-        firstName: userInfo.given_name,
-        lastName: userInfo.family_name,
+        id: userInfo.sub || '',
+        username: userInfo.preferred_username || '',
+        email: userInfo.email || '',
+        firstName: userInfo.given_name || '',
+        lastName: userInfo.family_name || '',
         roles: userInfo.realm_access?.roles || [],
       },
     });
@@ -171,7 +181,14 @@ async function handleSuccessfulLogin(data: any, keycloakUrl: string, realm: stri
       token: data.access_token,
       refreshToken: data.refresh_token,
       expiresIn: data.expires_in,
-      user: null
+      user: {
+        id: '',
+        username: 'unknown',
+        email: '',
+        firstName: '',
+        lastName: '',
+        roles: []
+      }
     });
   }
 } 

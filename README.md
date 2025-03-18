@@ -6,7 +6,6 @@ A comprehensive e-learning platform built with a microservices architecture, orc
 
 The E-Learning Platform is built as a set of microservices, each with its own responsibility:
 
-- **API Gateway**: Entry point for client requests
 - **Auth Service**: Handles authentication and authorization
 - **User Service**: Manages user profiles and data
 - **Course Service**: Handles course creation and management
@@ -41,7 +40,6 @@ For detailed information about the migration, see [Migration Guide](k8s/MIGRATIO
 ```
 e-learning-platform/
 ├── backend/             # Backend microservices
-│   ├── api-gateway/     # API Gateway service
 │   ├── auth-service/    # Authentication service
 │   ├── user-service/    # User management service
 │   ├── course-service/  # Course management service
@@ -144,23 +142,6 @@ e-learning-platform/
 
 This project demonstrates various advanced UI components and features implemented in React with TypeScript and Material UI.
 
-## Features
-
-### PDF Viewer
-- Built with `react-pdf`
-- Support for page navigation, zooming, and downloading
-- Responsive design for various screen sizes
-
-### Charts
-- Built with `chart.js` and `react-chartjs-2`
-- Support for line, bar, pie, and radar charts
-- Responsive and interactive
-
-### Drag and Drop
-- Built with `react-dnd`
-- Task manager with drag and drop reordering
-- Priority and completion status visualization
-
 ## Getting Started
 
 ### Prerequisites
@@ -195,10 +176,6 @@ yarn start
 
 ```
 src/
-├── components/     # Reusable UI components
-│   ├── charts/     # Chart components
-│   ├── common/     # Common components like PDF viewer
-│   └── dnd/        # Drag and drop components
 ├── examples/       # Example components demonstrating features
 ├── hooks/          # Custom React hooks
 ├── pages/          # Application pages
@@ -214,9 +191,6 @@ src/
 - TypeScript
 - Material UI
 - React Router
-- Chart.js
-- React PDF
-- React DnD
 
 ## License
 

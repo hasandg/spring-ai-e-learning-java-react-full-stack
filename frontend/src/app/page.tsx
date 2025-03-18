@@ -47,20 +47,21 @@ const featuredCourses = [
 
 export default function HomePage() {
   const theme = useTheme();
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const username = user?.username || 'unknown user';
   const router = useRouter();
   
   // Check if we're in development mode
   const isDev = process.env.NODE_ENV === 'development';
   
-  // Only redirect if user is authenticated and not in development mode
-  if (isAuthenticated && !isDev) {
+  // Always redirect if user is authenticated (dev mode or not)
+  if (isAuthenticated) {
     router.push('/courses');
     return null;
   }
   
-  // Display a message for authenticated users in development mode
-  const isDevAuth = isAuthenticated && isDev;
+  // Dev mode banner disabled - no longer needed
+  // const isDevAuth = isAuthenticated && isDev;
 
   return (
     <Box sx={{ 
@@ -71,21 +72,7 @@ export default function HomePage() {
       {/* NavBar */}
       <Navbar />
       
-      {/* Dev Mode Authentication Banner */}
-      {isDevAuth && (
-        <Box 
-          sx={{ 
-            backgroundColor: 'green',
-            color: 'white',
-            p: 2,
-            textAlign: 'center',
-            fontWeight: 'bold'
-          }}
-        >
-          DEV MODE: You are authenticated as {useSelector((state: RootState) => state.auth.user?.username || 'unknown user')}. 
-          In production mode, you would be redirected to /courses.
-        </Box>
-      )}
+      {/* Dev Mode Banner removed */}
       
       {/* Hero Section with Image */}
       <Box

@@ -30,14 +30,6 @@ export const documentViewerConfig = {
   documentServerUrl: process.env.NEXT_PUBLIC_DOCUMENT_SERVER_URL,
 };
 
-// PDF Viewer Configuration
-export const pdfViewerConfig = {
-  scale: 1.2,
-  pageNumber: 1,
-  renderTextLayer: true,
-  renderAnnotationLayer: true,
-};
-
 // Video Player Configuration
 export const videoPlayerConfig = {
   width: '100%',
@@ -46,27 +38,6 @@ export const videoPlayerConfig = {
   playing: false,
   muted: false,
   pip: true,
-};
-
-// Chart Configuration
-export const chartConfig = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'top' as const,
-    },
-    title: {
-      display: true,
-      text: '',
-    },
-  },
-};
-
-// Drag and Drop Configuration
-export const dndConfig = {
-  backend: 'html5',
-  preview: true,
 };
 
 // Scrollbar Configuration
