@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: common-config
+  namespace: e-learning
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://zipkin.e-learning.svc.cluster.local:9411/api/v2/spans"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka.e-learning.svc.cluster.local:9092"
+  LOGGING_PATTERN_LEVEL: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]" 

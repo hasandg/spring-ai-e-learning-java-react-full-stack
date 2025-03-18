@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+}
+
+/* Disabling dark mode for now to fix the white text on white background issue
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-rgb: 30, 30, 30;
+  }
+}
+*/
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  min-height: 100vh;
+}
+
+/* Custom utility classes */
+@layer components {
+  .btn-primary {
+    @apply bg-primary-main text-white px-4 py-2 rounded-md hover:bg-primary-dark transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary-main text-white px-4 py-2 rounded-md hover:bg-secondary-dark transition-colors;
+  }
+  
+  .container-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Global styles for the application */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  min-height: 100vh;
+  overflow-x: hidden;
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+}
+
+/* Fix z-index stacking issues */
+.MuiPaper-root {
+  position: relative;
+  z-index: 10;
+}
+
+.MuiContainer-root {
+  position: relative;
+  z-index: 5;
+}
+
+/* Ensure form elements are above background */
+.MuiFormControl-root,
+.MuiTextField-root,
+.MuiButton-root {
+  position: relative;
+  z-index: 15;
+}
+
+/* Fix background issues */
+#__next {
+  background-color: white;
+  min-height: 100vh;
+}
+
+main {
+  position: relative;
+  background: white;
+  min-height: 100vh;
+} 

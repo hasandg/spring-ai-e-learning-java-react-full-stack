@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: e-learning
+
+resources:
+  # Namespace
+  - namespace.yaml
+
+  # Infrastructure
+  - infrastructure/postgres.yaml
+  - infrastructure/redis.yaml
+  - infrastructure/kafka.yaml
+  - infrastructure/monitoring.yaml
+
+  # Microservices
+  - services/auth-service.yaml
+  - services/user-service.yaml
+  - services/course-service.yaml
+  - services/video-service.yaml
+  - services/frontend.yaml 

@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: e-learning
+data:
+  application.yml: |
+    server:
+      port: 8081
+      
+    spring:
+      application:
+        name: auth-service
+      datasource:
+        url: jdbc:postgresql://postgres.e-learning.svc.cluster.local:5432/auth_service_db
+        username: postgres
+        password: ${POSTGRES_PASSWORD}
+        driver-class-name: org.postgresql.Driver
+      jpa:
+        hibernate:
+          ddl-auto: update
+        show-sql: false
+        properties:
+          hibernate:
+            format_sql: true
+            dialect: org.hibernate.dialect.PostgreSQLDialect
+      redis:
+        host: redis.e-learning.svc.cluster.local
+        port: 6379
+      
+      # Configure service discovery with Kubernetes
+      cloud:
+        kubernetes:
+          discovery:
+            all-namespaces: false
+
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: "*"
+      endpoint:
+        health:
+          show-details: always
+      metrics:
+        export:
+          prometheus:
+            enabled: true
+      tracing:
+        sampling:
+          probability: 1.0
+          
+    logging:
+      pattern:
+        level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: e-learning
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+      - name: auth-service
+        image: ${DOCKER_REGISTRY:-localhost:5000}/auth-service:latest
+        ports:
+        - containerPort: 8081
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+        envFrom:
+        - configMapRef:
+            name: common-config
+        volumeMounts:
+        - name: auth-service-config
+          mountPath: /workspace/config
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+      volumes:
+      - name: auth-service-config
+        configMap:
+          name: auth-service-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: e-learning
+spec:
+  selector:
+    app: auth-service
+  ports:
+  - port: 8081
+    targetPort: 8081
+  type: ClusterIP 
