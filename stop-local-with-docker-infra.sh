@@ -12,15 +12,6 @@ echo -e "${YELLOW}Stopping E-Learning Platform Local Services and Docker Infrast
 stop_local_services() {
   echo -e "${YELLOW}Stopping local services...${NC}"
   
-  if [ -f backend/logs/auth-service.pid ]; then
-    PID=$(cat backend/logs/auth-service.pid)
-    if ps -p $PID > /dev/null; then
-      echo -e "Stopping Auth Service (PID: $PID)"
-      kill $PID
-    fi
-    rm backend/logs/auth-service.pid
-  fi
-  
   if [ -f backend/logs/user-service.pid ]; then
     PID=$(cat backend/logs/user-service.pid)
     if ps -p $PID > /dev/null; then

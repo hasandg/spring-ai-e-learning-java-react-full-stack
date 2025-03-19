@@ -1,1 +1,221 @@
-databaseChangeLog: [{changeSet: {id: 1, author: hasandag, changes: [{createTable: {tableName: courses, columns: [{column: {name: id, type: bigint, autoIncrement: true, constraints: {primaryKey: true, nullable: false}}}, {column: {name: title, type: varchar(255), constraints: {nullable: false}}}, {column: {name: description, type: text}}, {column: {name: instructor_id, type: bigint, constraints: {nullable: false}}}, {column: {name: created_at, type: timestamp, defaultValueComputed: CURRENT_TIMESTAMP}}, {column: {name: updated_at, type: timestamp, defaultValueComputed: CURRENT_TIMESTAMP}}]}}]}}]
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: hasandag
+      changes:
+        - createTable:
+            tableName: courses
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: title
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: text
+              - column:
+                  name: instructor_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+
+  - changeSet:
+      id: 2
+      author: hasandag
+      changes:
+        - addColumn:
+            tableName: courses
+            columns:
+              - column:
+                  name: category
+                  type: varchar(100)
+              - column:
+                  name: level
+                  type: varchar(50)
+              - column:
+                  name: price
+                  type: decimal(10,2)
+              - column:
+                  name: image_url
+                  type: text
+
+  - changeSet:
+      id: 3
+      author: hasandag
+      changes:
+        - createTable:
+            tableName: enrollments
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: course_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: progress
+                  type: int
+                  defaultValue: 0
+              - column:
+                  name: status
+                  type: varchar(20)
+                  defaultValue: 'ENROLLED'
+              - column:
+                  name: enrollment_date
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: last_accessed
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+        - addUniqueConstraint:
+            tableName: enrollments
+            columnNames: user_id, course_id
+            constraintName: uk_enrollments_user_course
+
+  - changeSet:
+      id: 4
+      author: hasandag
+      changes:
+        - createTable:
+            tableName: ratings
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: course_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rating
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: comment
+                  type: text
+              - column:
+                  name: created_at
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+        - addUniqueConstraint:
+            tableName: ratings
+            columnNames: user_id, course_id
+            constraintName: uk_ratings_user_course
+        - addCheckConstraint:
+            tableName: ratings
+            constraintName: chk_rating_value
+            checkExpression: rating BETWEEN 1 AND 5
+
+  - changeSet:
+      id: 5
+      author: hasandag
+      changes:
+        - loadData:
+            tableName: courses
+            file: db/data/sample_courses.csv
+            separator: ','
+            columns:
+              - column:
+                  name: title
+                  type: STRING
+              - column:
+                  name: description
+                  type: STRING
+              - column:
+                  name: category
+                  type: STRING
+              - column:
+                  name: level
+                  type: STRING
+              - column:
+                  name: price
+                  type: NUMERIC
+              - column:
+                  name: image_url
+                  type: STRING
+              - column:
+                  name: instructor_id
+                  type: NUMERIC
+
+  - changeSet:
+      id: 6
+      author: hasandag
+      changes:
+        - loadData:
+            tableName: ratings
+            file: db/data/sample_ratings.csv
+            separator: ','
+            columns:
+              - column:
+                  name: user_id
+                  type: NUMERIC
+              - column:
+                  name: course_id
+                  type: NUMERIC
+              - column:
+                  name: rating
+                  type: NUMERIC
+              - column:
+                  name: comment
+                  type: STRING
+
+  - changeSet:
+      id: 7
+      author: hasandag
+      changes:
+        - loadData:
+            tableName: enrollments
+            file: db/data/sample_enrollments.csv
+            separator: ','
+            columns:
+              - column:
+                  name: user_id
+                  type: NUMERIC
+              - column:
+                  name: course_id
+                  type: NUMERIC
+              - column:
+                  name: progress
+                  type: NUMERIC
+              - column:
+                  name: status
+                  type: STRING

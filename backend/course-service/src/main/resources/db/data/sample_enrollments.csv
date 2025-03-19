@@ -1,0 +1,7 @@
+user_id,course_id,progress,status
+1,1,75,"IN_PROGRESS"
+1,2,30,"IN_PROGRESS"
+2,1,100,"COMPLETED"
+2,3,50,"IN_PROGRESS"
+3,4,25,"IN_PROGRESS"
+3,5,10,"IN_PROGRESS" 

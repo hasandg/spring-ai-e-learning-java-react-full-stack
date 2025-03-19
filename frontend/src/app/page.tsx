@@ -3,7 +3,6 @@
 import { Box, Button, Container, Grid, Paper, Typography, Card, CardContent, CardMedia, Stack, useTheme } from '@mui/material'
 import { useRouter } from 'next/navigation'
 import { useSelector } from 'react-redux'
-import type { RootState } from '@/store'
 import SchoolIcon from '@mui/icons-material/School'
 import DevicesIcon from '@mui/icons-material/Devices'
 import GroupIcon from '@mui/icons-material/Group'
@@ -13,6 +12,7 @@ import StarIcon from '@mui/icons-material/Star'
 import Link from 'next/link'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
+import { useEffect, useState } from 'react'
 
 // Sample featured courses for the UI
 const featuredCourses = [
@@ -47,21 +47,86 @@ const featuredCourses = [
 
 export default function HomePage() {
   const theme = useTheme();
-  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
-  const username = user?.username || 'unknown user';
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Safely check authentication status from localStorage
+  const [authState, setAuthState] = useState({
+    isAuthenticated: false,
+    username: 'Guest'
+  });
+  
+  useEffect(() => {
+    try {
+      // Check if the user is authenticated via localStorage
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+      const userStr = localStorage.getItem('user');
+      let user = null;
+      
+      try {
+        if (userStr) {
+          user = JSON.parse(userStr);
+        }
+      } catch (e) {
+        console.error('Failed to parse user data:', e);
+      }
+      
+      const isAuthenticated = !!token;
+      
+      setAuthState({
+        isAuthenticated,
+        username: user?.username || 'Guest'
+      });
+      
+      // If authenticated, redirect to courses with a special indicator for middleware bypass
+      if (isAuthenticated) {
+        console.log('User is authenticated, redirecting to courses...');
+        // Add a login source indicator to the URL
+        setTimeout(() => {
+          // Use a URL parameter to indicate we're coming from the home page after login
+          router.push('/courses?from=home&auth=true');
+        }, 100);
+      }
+    } catch (e) {
+      console.error('Error checking auth state:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [router]);
   
   // Check if we're in development mode
   const isDev = process.env.NODE_ENV === 'development';
   
-  // Always redirect if user is authenticated (dev mode or not)
-  if (isAuthenticated) {
-    router.push('/courses');
-    return null;
+  // Handle form submissions with token
+  useEffect(() => {
+    // Function to parse form data from POST
+    const handleFormPost = () => {
+      // If this was redirected from the login page via form submit
+      if (document.referrer.includes('/login')) {
+        console.log('Detected form post from login page');
+        
+        // Set cookies from token in URL or form data if present
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        
+        if (token) {
+          console.log('Setting token from URL params');
+          document.cookie = `token=${token}; path=/; max-age=3600`;
+        }
+      }
+    };
+    
+    handleFormPost();
+  }, []);
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Typography variant="h5">Loading...</Typography>
+      </Box>
+    );
   }
-  
-  // Dev mode banner disabled - no longer needed
-  // const isDevAuth = isAuthenticated && isDev;
 
   return (
     <Box sx={{ 
@@ -71,8 +136,6 @@ export default function HomePage() {
     }}>
       {/* NavBar */}
       <Navbar />
-      
-      {/* Dev Mode Banner removed */}
       
       {/* Hero Section with Image */}
       <Box
@@ -384,5 +447,5 @@ export default function HomePage() {
         </Container>
       </Box>
     </Box>
-  )
+  );
 } 

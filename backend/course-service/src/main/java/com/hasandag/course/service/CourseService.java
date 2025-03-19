@@ -1,9 +1,15 @@
 package com.hasandag.course.service;
 
 import com.hasandag.course.model.Course;
+import com.hasandag.course.model.Enrollment;
+import com.hasandag.course.model.Rating;
 import com.hasandag.course.repository.CourseRepository;
+import com.hasandag.course.repository.EnrollmentRepository;
+import com.hasandag.course.repository.RatingRepository;
 import com.hasandag.course.kafka.CourseEvent;
 import com.hasandag.course.kafka.CourseEventProducer;
+import com.hasandag.course.dto.CourseDto;
+import com.hasandag.course.mapper.CourseMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,10 +26,57 @@ import java.util.Optional;
 public class CourseService {
 
     private final CourseRepository courseRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final RatingRepository ratingRepository;
     private final CourseEventProducer courseEventProducer;
+    private final CourseMapper courseMapper;
 
     public List<Course> getAllCourses() {
         return courseRepository.findAll();
+    }
+    
+    public List<CourseDto> getAllCoursesWithDetails() {
+        List<Course> courses = courseRepository.findAll();
+        return courses.stream()
+                .map(course -> {
+                    CourseDto dto = courseMapper.toDto(course);
+                    
+                    // Enhance with additional details
+                    Integer enrollmentCount = enrollmentRepository.countByCourseId(course.getId());
+                    Double averageRating = ratingRepository.getAverageRatingForCourse(course.getId());
+                    
+                    dto.setEnrollmentCount(enrollmentCount);
+                    dto.setAverageRating(averageRating);
+                    
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+    
+    public CourseDto getCourseWithDetails(Long courseId, Long userId) {
+        Optional<Course> courseOpt = courseRepository.findById(courseId);
+        
+        if (!courseOpt.isPresent()) {
+            return null;
+        }
+        
+        Course course = courseOpt.get();
+        CourseDto dto = courseMapper.toDto(course);
+        
+        // Add enrollment count and average rating
+        Integer enrollmentCount = enrollmentRepository.countByCourseId(courseId);
+        Double averageRating = ratingRepository.getAverageRatingForCourse(courseId);
+        
+        dto.setEnrollmentCount(enrollmentCount);
+        dto.setAverageRating(averageRating);
+        
+        // Add user-specific progress if available
+        if (userId != null) {
+            Optional<Enrollment> enrollment = enrollmentRepository.findByUserIdAndCourseId(userId, courseId);
+            enrollment.ifPresent(e -> dto.setProgress(e.getProgress()));
+        }
+        
+        return dto;
     }
 
     public Optional<Course> getCourseById(Long id) {
@@ -111,5 +165,70 @@ public class CourseService {
 
     public List<Course> searchCoursesByTitle(String keyword) {
         return courseRepository.findByTitleContainingIgnoreCase(keyword);
+    }
+    
+    // Enrollment methods
+    
+    public List<Enrollment> getUserEnrollments(Long userId) {
+        return enrollmentRepository.findByUserId(userId);
+    }
+    
+    @Transactional
+    public Enrollment enrollUserInCourse(Long userId, Long courseId) {
+        Optional<Enrollment> existingEnrollment = enrollmentRepository.findByUserIdAndCourseId(userId, courseId);
+        
+        if (existingEnrollment.isPresent()) {
+            return existingEnrollment.get();
+        }
+        
+        Enrollment enrollment = Enrollment.builder()
+                .userId(userId)
+                .courseId(courseId)
+                .progress(0)
+                .status("ENROLLED")
+                .build();
+                
+        return enrollmentRepository.save(enrollment);
+    }
+    
+    @Transactional
+    public Optional<Enrollment> updateEnrollmentProgress(Long userId, Long courseId, Integer progress) {
+        return enrollmentRepository.findByUserIdAndCourseId(userId, courseId)
+                .map(enrollment -> {
+                    enrollment.setProgress(progress);
+                    enrollment.setLastAccessed(LocalDateTime.now());
+                    return enrollmentRepository.save(enrollment);
+                });
+    }
+    
+    // Rating methods
+    
+    public List<Rating> getCourseRatings(Long courseId) {
+        return ratingRepository.findByCourseId(courseId);
+    }
+    
+    @Transactional
+    public Rating rateCourse(Long userId, Long courseId, Integer rating, String comment) {
+        Optional<Rating> existingRating = ratingRepository.findByUserIdAndCourseId(userId, courseId);
+        
+        if (existingRating.isPresent()) {
+            Rating updateRating = existingRating.get();
+            updateRating.setRating(rating);
+            updateRating.setComment(comment);
+            return ratingRepository.save(updateRating);
+        }
+        
+        Rating newRating = Rating.builder()
+                .userId(userId)
+                .courseId(courseId)
+                .rating(rating)
+                .comment(comment)
+                .build();
+                
+        return ratingRepository.save(newRating);
+    }
+    
+    public Double getAverageRatingForCourse(Long courseId) {
+        return ratingRepository.getAverageRatingForCourse(courseId);
     }
 } 

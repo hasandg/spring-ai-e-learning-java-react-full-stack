@@ -1,143 +1,137 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import axios from '@/utils/axios';
+'use client';
 
-interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-}
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import { useRouter } from 'next/navigation';
+import { authService, UserProfile } from '@/services/authService';
 
-interface AuthContextType {
-  user: User | null;
+interface AuthContextProps {
+  user: UserProfile | null;
   loading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  register: (data: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-  }) => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
-  confirmResetPassword: (token: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  logout: () => void;
+  isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+export const AuthProvider = ({ children }: { children: any }) => {
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    // Check authentication status
+    const checkAuth = async () => {
+      try {
+        // First check if we have a token
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+        const isAuth = !!token;
+        
+        console.log('[AuthContext] Token exists:', isAuth);
+        setIsAuthenticated(isAuth);
+
+        if (isAuth) {
+          try {
+            // Try to get stored user data first
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+              console.log('[AuthContext] Found stored user data');
+              setUser(JSON.parse(storedUser));
+            } else {
+              console.log('[AuthContext] No stored user data found');
+            }
+          } catch (e) {
+            console.error('[AuthContext] Error loading stored user data:', e);
+            // Continue even if we can't load the stored user
+          }
+        } else {
+          setUser(null);
+        }
+      } catch (e) {
+        console.error('[AuthContext] Auth check error:', e);
+        setIsAuthenticated(false);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     checkAuth();
   }, []);
 
-  const checkAuth = async () => {
+  // This login method is only used by components that directly use AuthContext
+  // The login page uses its own direct implementation
+  const login = async (username: string, password: string) => {
     try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        const response = await axios.get('/auth/me');
-        setUser(response.data);
+      setLoading(true);
+      setError(null);
+      
+      console.log('[AuthContext] Login method called - note: login page uses its own implementation');
+      await authService.login(username, password);
+      
+      // Get user profile after successful login
+      try {
+        const profile = await authService.getUserProfile();
+        setUser(profile);
+        localStorage.setItem('user', JSON.stringify(profile));
+      } catch (profileError) {
+        console.error('[AuthContext] Profile fetch error:', profileError);
+        // Continue even if profile fetch fails
       }
-    } catch (err) {
-      localStorage.removeItem('token');
-      setUser(null);
+      
+      setIsAuthenticated(true);
+      
+      // Don't use router.push here, it's duplicating the redirect
+      // from the login page and causing issues
+    } catch (e) {
+      console.error('[AuthContext] Login error:', e);
+      setError(e instanceof Error ? e.message : 'Login failed');
+      setIsAuthenticated(false);
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (email: string, password: string) => {
-    try {
-      setError(null);
-      const response = await axios.post('/auth/login', { email, password });
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
-      throw err;
-    }
+  const logout = () => {
+    setLoading(true);
+    setUser(null);
+    setIsAuthenticated(false);
+    
+    // Clear all tokens and user data
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('user');
+    
+    // Redirect to login page
+    window.location.href = '/login';
   };
 
-  const logout = async () => {
-    try {
-      setError(null);
-      await axios.post('/auth/logout');
-      localStorage.removeItem('token');
-      setUser(null);
-      router.push('/login');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Logout failed');
-      throw err;
-    }
-  };
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        error,
+        login,
+        logout,
+        isAuthenticated,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
 
-  const register = async (data: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-  }) => {
-    try {
-      setError(null);
-      const response = await axios.post('/auth/register', data);
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
-      throw err;
-    }
-  };
-
-  const resetPassword = async (email: string) => {
-    try {
-      setError(null);
-      await axios.post('/auth/reset-password', { email });
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send reset instructions');
-      throw err;
-    }
-  };
-
-  const confirmResetPassword = async (token: string, password: string) => {
-    try {
-      setError(null);
-      await axios.post('/auth/reset-password/confirm', { token, password });
-      router.push('/login');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to reset password');
-      throw err;
-    }
-  };
-
-  const value = {
-    user,
-    loading,
-    error,
-    login,
-    logout,
-    register,
-    resetPassword,
-    confirmResetPassword,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }; 

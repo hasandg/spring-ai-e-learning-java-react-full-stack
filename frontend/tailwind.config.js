@@ -1,34 +1,37 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './src/app/**/*.{js,ts,jsx,tsx}',
-    './src/components/**/*.{js,ts,jsx,tsx}',
-    './src/lib/**/*.{js,ts,jsx,tsx}',
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       colors: {
         primary: {
-          light: '#4dabf5',
-          main: '#1976d2', 
-          dark: '#1565c0',
-          contrastText: '#ffffff',
-        },
-        secondary: {
-          light: '#ff4081',
-          main: '#f50057',
-          dark: '#c51162',
-          contrastText: '#ffffff',
+          50: '#f5f7ff',
+          100: '#ebf0fe',
+          200: '#dee8fe',
+          300: '#c3d4fd',
+          400: '#a1b8fb',
+          500: '#8098f9',
+          600: '#6073f5',
+          700: '#4f5ce1',
+          800: '#3e4db6',
+          900: '#364395',
+          950: '#1e244f',
         },
       },
-      fontFamily: {
-        sans: ['var(--font-roboto)', 'sans-serif'],
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
     },
   },
   plugins: [],
   corePlugins: {
-    preflight: false, // Disable preflight to avoid conflicts with MUI
+    preflight: false,
   },
-  important: '#__next', // This gives Tailwind CSS higher specificity over MUI
-}; 
+  important: '#__next',
+}
+

@@ -14,7 +14,6 @@ resources:
   - infrastructure/monitoring.yaml
 
   # Microservices
-  - services/auth-service.yaml
   - services/user-service.yaml
   - services/course-service.yaml
   - services/video-service.yaml

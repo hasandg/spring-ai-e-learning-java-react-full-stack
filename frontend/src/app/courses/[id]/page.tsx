@@ -29,17 +29,17 @@ interface Course {
 
 export default function CourseDetail() {
   const params = useParams()
-  const { id } = params
+  const id = params?.id as string
   
-  const [course, setCourse] = useState<Course | null>(null)
+  const [course, setCourse] = useState(null as Course | null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(null as string | null)
   
   useEffect(() => {
     const fetchCourse = async () => {
       try {
         setLoading(true)
-        const data = await courseService.getCourseById(id as string)
+        const data = await courseService.getCourseById(id)
         setCourse(data)
       } catch (err) {
         console.error('Error fetching course:', err)
@@ -163,7 +163,7 @@ export default function CourseDetail() {
       </Paper>
       
       {/* Course-specific AI Assistant */}
-      <AiAssistantButton courseId={id as string} context={aiContext} />
+      <AiAssistantButton courseId={id} context={aiContext} />
     </Container>
   )
 } 

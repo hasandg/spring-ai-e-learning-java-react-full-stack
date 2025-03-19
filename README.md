@@ -194,4 +194,53 @@ src/
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Test Credentials
+
+The system comes with a predefined test user:
+
+- **Username**: test
+- **Password**: Test@Pass123
+
+You can also register a new account using the registration form.
+
+## Updating Test User Password
+
+If you need to change the test user password, you can use the provided script:
+
+```bash
+cd backend/scripts
+./update-test-user-password.sh
+```
+
+This script requires Keycloak to be running and the admin credentials to be correct. You can customize the parameters by setting environment variables:
+
+```bash
+export KEYCLOAK_URL=http://localhost:8090
+export REALM=elearning
+export ADMIN_USERNAME=admin
+export ADMIN_PASSWORD=admin
+export TEST_USER=test
+export NEW_PASSWORD=your_new_password
+
+./update-test-user-password.sh
+```
+
+## Development
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Backend
+
+```bash
+cd backend
+./mvnw clean install
+./mvnw spring-boot:run
+``` 

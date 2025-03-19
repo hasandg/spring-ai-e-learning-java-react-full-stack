@@ -1,40 +1,4 @@
--- Create databases for each service
-CREATE DATABASE auth_service_db;
-CREATE DATABASE user_service_db;
-CREATE DATABASE course_service_db;
-CREATE DATABASE video_service_db;
-
--- Connect to auth_service_db and create schema
-\c auth_service_db;
-
--- Create schema if not exists
-CREATE SCHEMA IF NOT EXISTS auth;
-
--- Connect to user_service_db and create schema
-\c user_service_db;
-
--- Create schema if not exists
-CREATE SCHEMA IF NOT EXISTS users;
-
--- Connect to course_service_db and create schema
 \c course_service_db;
-
--- Create schema if not exists
-CREATE SCHEMA IF NOT EXISTS courses;
-
--- Connect to video_service_db and create schema
-\c video_service_db;
-
--- Create schema if not exists
-CREATE SCHEMA IF NOT EXISTS videos;
-
--- Roles
-INSERT INTO roles (name) VALUES ('ROLE_USER') ON CONFLICT (name) DO NOTHING;
-INSERT INTO roles (name) VALUES ('ROLE_MODERATOR') ON CONFLICT (name) DO NOTHING;
-INSERT INTO roles (name) VALUES ('ROLE_ADMIN') ON CONFLICT (name) DO NOTHING;
-
--- Create schema for course service if not exists
-CREATE SCHEMA IF NOT EXISTS course_service;
 
 -- Create courses table if it doesn't exist
 CREATE TABLE IF NOT EXISTS courses (
@@ -45,7 +9,7 @@ CREATE TABLE IF NOT EXISTS courses (
     level VARCHAR(50),
     price DECIMAL(10, 2),
     image_url TEXT,
-    instructor_id BIGINT NOT NULL,
+    instructor_id BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

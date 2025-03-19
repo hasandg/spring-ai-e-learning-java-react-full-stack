@@ -1,0 +1,8 @@
+user_id,course_id,rating,comment
+1,1,5,"Excellent introduction to programming concepts!"
+2,1,4,"Great for beginners, very clear explanations"
+1,2,5,"Comprehensive overview of web development"
+2,3,4,"Very practical examples for mobile development"
+3,4,5,"The best data science course I have taken"
+1,5,4,"Solid introduction to cloud concepts"
+3,6,5,"Essential knowledge for anyone in tech" 

@@ -20,6 +20,7 @@ import {
 } from '@mui/material'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Logo from '@/components/Logo'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -29,10 +30,10 @@ export default function RegisterPage() {
 
   const formik = useFormik({
     initialValues: {
-      firstName: 'Test',
-      lastName: 'User',
-      email: 'test@example.com',
-      password: 'password123',
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      password: 'Strong@Password123',
       role: 'USER',
     },
     validationSchema: Yup.object({
@@ -133,6 +134,10 @@ export default function RegisterPage() {
             borderRadius: 2
           }}
         >
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+            <Logo size="large" />
+          </Box>
+          
           <Typography component="h1" variant="h5" align="center" sx={{ color: 'black' }}>
             Sign up
           </Typography>
@@ -167,7 +172,6 @@ export default function RegisterPage() {
                   InputProps={{
                     sx: { color: 'black' }
                   }}
-                  placeholder=""
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -189,7 +193,6 @@ export default function RegisterPage() {
                   InputProps={{
                     sx: { color: 'black' }
                   }}
-                  placeholder=""
                 />
               </Grid>
               <Grid item xs={12}>
@@ -211,7 +214,6 @@ export default function RegisterPage() {
                   InputProps={{
                     sx: { color: 'black' }
                   }}
-                  placeholder=""
                 />
               </Grid>
               <Grid item xs={12}>
@@ -234,7 +236,6 @@ export default function RegisterPage() {
                   InputProps={{
                     sx: { color: 'black' }
                   }}
-                  placeholder=""
                 />
               </Grid>
               <Grid item xs={12}>
@@ -249,7 +250,7 @@ export default function RegisterPage() {
                     sx={{ color: 'black' }}
                     label="Role"
                   >
-                    <MenuItem value="USER">Student</MenuItem>
+                    <MenuItem value="USER">User</MenuItem>
                     <MenuItem value="INSTRUCTOR">Instructor</MenuItem>
                   </Select>
                 </FormControl>
@@ -262,20 +263,20 @@ export default function RegisterPage() {
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
             >
-              {loading ? <CircularProgress size={24} /> : 'SIGN UP'}
+              {loading ? <CircularProgress size={24} /> : 'Sign Up'}
             </Button>
-            
-            <Button
-              fullWidth
-              variant="text"
-              onClick={() => router.push('/login')}
-              sx={{ color: 'primary.main' }}
-            >
-              Already have an account? Sign in
-            </Button>
+            <Grid container justifyContent="center">
+              <Grid item>
+                <Link href="/login" passHref>
+                  <Typography component="span" variant="body2" sx={{ color: 'primary.main', textDecoration: 'underline', cursor: 'pointer' }}>
+                    Already have an account? Sign in
+                  </Typography>
+                </Link>
+              </Grid>
+            </Grid>
           </Box>
         </Paper>
       </Container>
     </Box>
-  )
+  );
 } 

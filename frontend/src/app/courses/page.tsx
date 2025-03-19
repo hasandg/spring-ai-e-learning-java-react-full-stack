@@ -25,6 +25,7 @@ import courseService from '@/services/courseService'
 import SearchIcon from '@mui/icons-material/Search'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import SortIcon from '@mui/icons-material/Sort'
+import Navbar from '@/components/Navbar'
 
 interface Course {
   id: number;
@@ -67,6 +68,26 @@ export default function CoursesPage() {
     
     fetchCourses()
   }, [])
+
+  // Check URL params for auth flag
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const authParam = params.get('auth');
+      
+      // If we have an auth param, store that we've successfully navigated here
+      if (authParam === 'true') {
+        console.log('Setting successful navigation flag in localStorage');
+        localStorage.setItem('courses_accessed', 'true');
+        
+        // Clean up URL parameters
+        const url = new URL(window.location.href);
+        url.searchParams.delete('auth');
+        url.searchParams.delete('from');
+        window.history.replaceState({}, '', url);
+      }
+    }
+  }, []);
 
   const handleCourseClick = (courseId: number) => {
     // In the future, this will navigate to the course details page
@@ -126,6 +147,8 @@ export default function CoursesPage() {
 
   return (
     <>
+      <Navbar />
+      
       {/* Hero Banner Section */}
       <Box
         sx={{

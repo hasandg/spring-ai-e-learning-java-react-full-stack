@@ -2,7 +2,7 @@ import './globals.css'
 import { Inter } from 'next/font/google'
 import ThemeRegistry from '@/components/ThemeRegistry'
 import ReduxProvider from '@/components/ReduxProvider'
-import { KeycloakProvider } from '@/contexts/KeycloakContext'
+import { AuthProvider } from '@/contexts/AuthContext'
 import AuthInitializer from '@/components/AuthInitializer'
 
 // Use Inter font
@@ -22,7 +22,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ReduxProvider>
-          <KeycloakProvider>
+          <AuthProvider>
             <AuthInitializer />
             <ThemeRegistry>
               <main style={{ 
@@ -37,7 +37,7 @@ export default function RootLayout({
                 {children}
               </main>
             </ThemeRegistry>
-          </KeycloakProvider>
+          </AuthProvider>
         </ReduxProvider>
       </body>
     </html>

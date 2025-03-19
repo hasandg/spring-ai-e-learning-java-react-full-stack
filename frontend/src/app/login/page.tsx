@@ -1,237 +1,276 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, CardContent, Typography, TextField, Button, Box, Alert, CircularProgress } from '@mui/material'
-import { useFormik } from 'formik'
-import * as Yup from 'yup'
-import { authService } from '@/services/authService'
-import { useDispatch } from 'react-redux'
-import { AppDispatch } from '@/store/store'
-import { setAuth } from '@/store/slices/authSlice'
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  TextField, 
+  Alert,
+  CircularProgress
+} from '@mui/material'
+import Logo from '@/components/Logo'
 
-const LoginPage = () => {
+export default function LoginPage() {
   const router = useRouter()
-  const dispatch = useDispatch<AppDispatch>()
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null as string | null)
-  const [success, setSuccess] = useState(null as string | null)
-  const [debugInfo, setDebugInfo] = useState({})
+  const [error, setError] = useState(null)
+  const [username, setUsername] = useState('test')
+  const [password, setPassword] = useState('Test@Pass123')
 
-  // Auto-debug on mount
-  useEffect(() => {
-    console.log("=== LOGIN PAGE MOUNTED - DIRECT KEYCLOAK AUTHENTICATION ===");
-    const initAuth = async () => {
+  const handleDirectLogin = async (e: any) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    
+    try {
+      // Get Keycloak configuration
+      const keycloakUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost:8090'
+      const realm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM || 'elearning'
+      const clientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || 'frontend'
+      
+      // Direct token endpoint call
+      const tokenEndpoint = `${keycloakUrl}/realms/${realm}/protocol/openid-connect/token`
+      
+      // Create form data for direct token request
+      const formData = new URLSearchParams()
+      formData.append('grant_type', 'password')
+      formData.append('client_id', clientId)
+      formData.append('username', username)
+      formData.append('password', password)
+      formData.append('scope', 'openid profile email')
+      
+      // Use more robust fetch with timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      
       try {
-        console.log("Checking Keycloak connection...");
+        const response = await fetch(tokenEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+          },
+          body: formData.toString(),
+          signal: controller.signal,
+          mode: 'cors',
+          credentials: 'include',
+        })
         
-        try {
-          const isInitialized = await authService.initKeycloak();
-          console.log("✅ Keycloak initialized:", isInitialized);
-          setDebugInfo((prev: any) => ({ ...prev, keycloakInitialized: isInitialized }));
-          
-          if (isInitialized && authService.isAuthenticated()) {
-            const userProfile = await authService.getUserProfile();
-            console.log("✅ User is already authenticated:", userProfile);
-            setDebugInfo((prev: any) => ({ 
-              ...prev, 
-              isAuthenticated: true,
-              userProfile
-            }));
-            // Redirect to dashboard if already logged in
-            router.push('/');
+        clearTimeout(timeoutId)
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          try {
+            const errorData = JSON.parse(errorText)
+            throw new Error(errorData.error_description || `Authentication failed (${response.status})`)
+          } catch (parseError) {
+            throw new Error(`Authentication failed (${response.status}): ${errorText.substring(0, 100)}`)
           }
-        } catch (keycloakError) {
-          console.error("❌ Keycloak initialization error:", keycloakError);
-          setDebugInfo((prev: any) => ({ 
-            ...prev, 
-            keycloakInitialized: false,
-            keycloakError
-          }));
         }
-      } catch (e) {
-        console.error("Auto-debug error:", e);
-        setDebugInfo((prev: any) => ({ ...prev, autoDebugError: e }));
-      }
-    };
-    
-    // Run the debug after a short delay to ensure component is fully mounted
-    const timer = setTimeout(() => {
-      initAuth();
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, [router]);
-
-  const validationSchema = Yup.object({
-    email: Yup.string().required('Kullanıcı adı veya e-posta adresi zorunludur'),
-    password: Yup.string().required('Şifre zorunludur')
-  })
-
-  const formik = useFormik({
-    initialValues: {
-      email: 'test',
-      password: 'testpass123'
-    },
-    validationSchema,
-    onSubmit: async (values) => {
-      try {
-        setLoading(true)
-        setError(null)
         
-        console.log('Login attempt with:', values.email);
-        
-        // Extract username from email (part before @)
-        const username = values.email.includes('@') ? values.email.split('@')[0] : values.email;
-        
-        // Instead of redirecting to Keycloak, use a direct token API
+        // Try to parse the response
+        let data
         try {
-          // This would be your backend API endpoint that handles token exchange
-          const response = await fetch('/api/auth/login', {
-            method: 'POST',
+          const responseText = await response.text()
+          data = JSON.parse(responseText)
+        } catch (parseError) {
+          throw new Error('Invalid token response format')
+        }
+        
+        if (!data.access_token) {
+          throw new Error('Invalid token response: No access token received')
+        }
+        
+        // Store all tokens
+        localStorage.setItem('auth_token', data.access_token)
+        localStorage.setItem('token', data.access_token)
+        localStorage.setItem('refresh_token', data.refresh_token)
+        localStorage.setItem('refreshToken', data.refresh_token)
+        localStorage.setItem('isAuthenticated', 'true')
+        
+        // Basic user info
+        const userInfo = {
+          username: username,
+          roles: ['USER']
+        }
+        localStorage.setItem('user', JSON.stringify(userInfo))
+        
+        // Try to fetch the complete user profile
+        try {
+          const userInfoEndpoint = `${keycloakUrl}/realms/${realm}/protocol/openid-connect/userinfo`
+          
+          const profileResponse = await fetch(userInfoEndpoint, {
+            method: 'GET',
             headers: {
-              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${data.access_token}`,
+              'Accept': 'application/json'
             },
-            body: JSON.stringify({
-              username, // Send the extracted username
-              email: values.email, // Send the full email
-              password: values.password,
-            }),
-          });
+            mode: 'cors',
+          })
           
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Login failed');
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json()
+            
+            const completeUserInfo = {
+              id: profileData.sub || '',
+              username: profileData.preferred_username || username,
+              email: profileData.email || '',
+              firstName: profileData.given_name || '',
+              lastName: profileData.family_name || '',
+              roles: profileData.realm_access?.roles || ['USER']
+            }
+            
+            localStorage.setItem('user', JSON.stringify(completeUserInfo))
           }
-          
-          const data = await response.json();
-          console.log('Login successful, token received');
-          
-          // Show success
-          setSuccess('Login successful! Redirecting to dashboard...');
-          
-          // Store tokens (this should match your auth service implementation)
-          localStorage.setItem('auth_token', data.token);
-          localStorage.setItem('refresh_token', data.refreshToken);
-          
-          // Also set the token as a cookie for middleware
-          document.cookie = `token=${data.token}; path=/; max-age=${data.expiresIn}`;
-          
-          if (data.user) {
-            localStorage.setItem('user', JSON.stringify(data.user));
-          }
-          
-          // Update Redux state
-          dispatch(setAuth({
-            token: data.token,
-            user: data.user,
-            isAuthenticated: true
-          }));
-          
-          // Redirect to dashboard
-          console.log('Setting up redirect timeout...');
-          setTimeout(() => {
-            console.log('Redirect timeout triggered, redirecting now...');
-            window.location.href = 'http://localhost:3000/';
-          }, 2000);
-        } catch (err) {
-          console.error('Login API error:', err);
-          throw err;
+        } catch (profileError) {
+          // Continue even if profile fetch fails
         }
-      } catch (error: any) {
-        console.error('Login error:', error)
-        setError(error?.message || 'Login failed. Please try again.')
-      } finally {
-        setLoading(false)
+        
+        // Automatically redirect to courses page
+        window.location.href = '/courses?from=login&auth=true';
+      } catch (fetchError: any) {
+        // Network error or timeout
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Login request timed out. Please try again.')
+        } else {
+          throw new Error(`Network error: ${fetchError.message}`)
+        }
       }
+      
+    } catch (error: any) {
+      setError(error instanceof Error ? error.message : 'Login failed. Please check your credentials and try again.')
+    } finally {
+      setLoading(false)
     }
-  })
+  }
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
+    <Box 
+      sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
         justifyContent: 'center',
-        alignItems: 'center',
         minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
-        padding: 2
+        padding: 3,
+        backgroundColor: '#f5f5f5'
       }}
     >
-      <Card sx={{ maxWidth: 450, width: '100%', boxShadow: 3 }}>
-        <CardContent sx={{ padding: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 3 }}>
-            Giriş Yap
-          </Typography>
+      <Box 
+        sx={{ 
+          p: 4, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+          backgroundColor: 'white',
+          borderRadius: 2,
+          boxShadow: 3,
+          maxWidth: 400,
+          width: '100%'
+        }}
+      >
+        <Box sx={{ mb: 3 }}>
+          <Logo size="large" />
+        </Box>
+        
+        <Typography variant="h5" component="h2" gutterBottom>
+          Login
+        </Typography>
+        
+        {error && (
+          <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        
+        <Box component="form" onSubmit={handleDirectLogin} sx={{ width: '100%' }}>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="username"
+            label="Username"
+            name="username"
+            autoComplete="username"
+            autoFocus
+            value={username}
+            onChange={(e: any) => setUsername(e.target.value)}
+            disabled={loading}
+          />
           
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Password"
+            type="password"
+            id="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e: any) => setPassword(e.target.value)}
+            disabled={loading}
+          />
           
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {success}
-            </Alert>
-          )}
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'Sign In'}
+          </Button>
           
-          <form onSubmit={formik.handleSubmit}>
-            <TextField
-              fullWidth
-              id="email"
-              name="email"
-              label="Kullanıcı Adı veya E-posta"
-              value={formik.values.email}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.email && Boolean(formik.errors.email)}
-              helperText={formik.touched.email && formik.errors.email}
-              margin="normal"
-              variant="outlined"
-            />
-            
-            <TextField
-              fullWidth
-              id="password"
-              name="password"
-              label="Şifre"
-              type="password"
-              value={formik.values.password}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.password && Boolean(formik.errors.password)}
-              helperText={formik.touched.password && formik.errors.password}
-              margin="normal"
-              variant="outlined"
-              sx={{ mb: 3 }}
-            />
-            
-            <Button
-              fullWidth
-              variant="contained"
-              color="primary"
-              type="submit"
-              disabled={loading}
-              sx={{ py: 1.5 }}
-            >
-              {loading ? <CircularProgress size={24} /> : 'LOGIN'}
-            </Button>
-          </form>
-          
-          <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              Hesabınız yok mu? <Link href="/register">Kayıt Ol</Link>
+          <Box sx={{ 
+            mt: 2, 
+            display: 'flex', 
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
+            <Typography variant="body2" sx={{ mr: 1 }}>
+              Don't have an account?
             </Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              <Link href="/reset-password">Şifremi Unuttum</Link>
-            </Typography>
+            <Link href="/register" passHref>
+              <Typography 
+                component="span" 
+                variant="body2" 
+                sx={{ 
+                  color: 'primary.main', 
+                  textDecoration: 'underline',
+                  cursor: 'pointer'
+                }}
+              >
+                Register
+              </Typography>
+            </Link>
           </Box>
-        </CardContent>
-      </Card>
+          
+          <Box sx={{ 
+            mt: 1, 
+            display: 'flex', 
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
+            <Link href="/forgot-password" passHref>
+              <Typography 
+                component="span" 
+                variant="body2" 
+                sx={{ 
+                  color: 'primary.main', 
+                  textDecoration: 'underline',
+                  cursor: 'pointer'
+                }}
+              >
+                Forgot Password?
+              </Typography>
+            </Link>
+          </Box>
+        </Box>
+      </Box>
     </Box>
   )
-}
-
-export default LoginPage 
+} 

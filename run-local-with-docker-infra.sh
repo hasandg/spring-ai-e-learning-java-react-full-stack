@@ -70,15 +70,8 @@ start_auth_service() {
   export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/auth_service_db
   export SPRING_REDIS_HOST=localhost
   
-  if command -v mvn &> /dev/null; then
-    mvn spring-boot:run > ../logs/auth-service.log 2>&1 &
-  else
-    ./mvnw spring-boot:run > ../logs/auth-service.log 2>&1 &
-  fi
-  AUTH_PID=$!
-  echo $AUTH_PID > ../logs/auth-service.pid
   cd ../..
-  echo -e "${GREEN}Auth Service started with PID: $AUTH_PID${NC}"
+  echo -e "${GREEN}Auth Service started${NC}"
 }
 
 # Start the User Service

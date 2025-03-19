@@ -17,7 +17,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import MainLayout from '@/components/layout/MainLayout';
 
-const DashboardPage: React.FC = () => {
+const DashboardPage = () => {
   const theme = useTheme();
   const { t } = useTranslation();
 
@@ -115,10 +115,75 @@ const DashboardPage: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 {t('dashboard.learningProgress')}
               </Typography>
-              <Box sx={{ height: 300, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <Typography variant="body1" color="text.secondary">
-                  Learning progress chart has been removed (chart.js dependency removed)
-                </Typography>
+              <Box sx={{ p: 2 }}>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle1">Courses in Progress</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                        <LinearProgress
+                          variant="determinate"
+                          value={65}
+                          sx={{
+                            height: 8,
+                            borderRadius: 4,
+                            flexGrow: 1,
+                            mr: 2,
+                            backgroundColor: `${theme.palette.primary.main}15`,
+                            '& .MuiLinearProgress-bar': {
+                              backgroundColor: theme.palette.primary.main,
+                            },
+                          }}
+                        />
+                        <Typography variant="body2">65%</Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle1">Assignments Completed</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                        <LinearProgress
+                          variant="determinate"
+                          value={42}
+                          sx={{
+                            height: 8,
+                            borderRadius: 4,
+                            flexGrow: 1,
+                            mr: 2,
+                            backgroundColor: `${theme.palette.success.main}15`,
+                            '& .MuiLinearProgress-bar': {
+                              backgroundColor: theme.palette.success.main,
+                            },
+                          }}
+                        />
+                        <Typography variant="body2">42%</Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="subtitle1">Quiz Scores</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                        <LinearProgress
+                          variant="determinate"
+                          value={78}
+                          sx={{
+                            height: 8,
+                            borderRadius: 4,
+                            flexGrow: 1,
+                            mr: 2,
+                            backgroundColor: `${theme.palette.info.main}15`,
+                            '& .MuiLinearProgress-bar': {
+                              backgroundColor: theme.palette.info.main,
+                            },
+                          }}
+                        />
+                        <Typography variant="body2">78%</Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                </Grid>
               </Box>
             </CardContent>
           </Card>

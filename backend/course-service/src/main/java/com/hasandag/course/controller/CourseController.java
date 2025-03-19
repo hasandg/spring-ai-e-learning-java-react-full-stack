@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,16 +26,27 @@ public class CourseController {
 
     @GetMapping
     public ResponseEntity<List<CourseDto>> getAllCourses() {
-        List<Course> courses = courseService.getAllCourses();
-        return ResponseEntity.ok(courseMapper.toDtoList(courses));
+        return ResponseEntity.ok(courseService.getAllCoursesWithDetails());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CourseDto> getCourseById(@PathVariable Long id) {
-        return courseService.getCourseById(id)
-                .map(courseMapper::toDto)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<CourseDto> getCourseById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal(expression = "subject") String userId) {
+        
+        Long userIdLong = null;
+        if (userId != null && !userId.isEmpty()) {
+            try {
+                userIdLong = Long.parseLong(userId);
+            } catch (NumberFormatException e) {
+                log.warn("Could not parse user ID: {}", userId);
+            }
+        }
+        
+        CourseDto courseDto = courseService.getCourseWithDetails(id, userIdLong);
+        return courseDto != null 
+            ? ResponseEntity.ok(courseDto)
+            : ResponseEntity.notFound().build();
     }
 
     @PostMapping

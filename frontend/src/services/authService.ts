@@ -1,33 +1,15 @@
-import Keycloak, { KeycloakInstance } from 'keycloak-js';
+// Create a simpler auth service that doesn't rely on Keycloak.js
+// and handles direct token requests
 
 const KEYCLOAK_URL = process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost:8090';
 const REALM = process.env.NEXT_PUBLIC_KEYCLOAK_REALM || 'elearning';
 const CLIENT_ID = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || 'frontend';
-const CLIENT_SECRET = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_SECRET || '';
-
-// Initialize Keycloak instance
-const keycloakConfig = {
-  url: KEYCLOAK_URL,
-  realm: REALM,
-  clientId: CLIENT_ID
-  // Public client doesn't need credentials
-};
-
-let keycloak: any = null;
-
-// Only initialize in browser, not during SSR
-if (typeof window !== 'undefined') {
-  keycloak = new Keycloak(keycloakConfig);
-}
 
 export interface AuthResponse {
   token: string;
   refreshToken: string;
-  idToken: string;
-  username: string;
-  email: string;
-  roles: string[];
-  tokenParsed: any;
+  expiresIn: number;
+  tokenType: string;
 }
 
 export interface UserProfile {
@@ -40,138 +22,180 @@ export interface UserProfile {
 }
 
 export const authService = {
-  initKeycloak: async (): Promise<boolean> => {
-    if (!keycloak) {
-      console.error('Keycloak not initialized - client is null');
-      return false;
-    }
-    
+  /**
+   * Authenticate user directly using the token endpoint
+   */
+  login: async (username: string, password: string): Promise<AuthResponse> => {
     try {
-      console.log('Starting Keycloak initialization with config:', keycloakConfig);
+      const tokenEndpoint = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`;
       
-      const authenticated = await keycloak.init({
-        onLoad: 'check-sso',
-        silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
-        pkceMethod: 'S256',
-        checkLoginIframe: false // Add this to avoid iframe issues
+      // Create form data for direct token request
+      const formData = new URLSearchParams();
+      formData.append('grant_type', 'password');
+      formData.append('client_id', CLIENT_ID);
+      formData.append('username', username);
+      formData.append('password', password);
+      formData.append('scope', 'openid profile email');
+      
+      const response = await fetch(tokenEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString(),
       });
       
-      console.log('Keycloak initialized successfully:', 
-        authenticated ? 'User is authenticated' : 'User is not authenticated');
-      console.log('Keycloak instance:', keycloak);
-      return authenticated;
-    } catch (error) {
-      console.error('Failed to initialize Keycloak. Detailed error:', error);
-      console.log('Keycloak config used:', keycloakConfig);
-      console.log('Environment variables:', {
-        KEYCLOAK_URL,
-        REALM,
-        CLIENT_ID
-      });
-      return false;
-    }
-  },
-  
-  login: async (): Promise<AuthResponse> => {
-    if (!keycloak) {
-      console.error('Keycloak not initialized - client is null');
-      throw new Error('Keycloak not initialized');
-    }
-    
-    try {
-      console.log('Attempting to log in with Keycloak');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error_description || 'Failed to authenticate');
+      }
       
-      // Define login options for better control
-      const loginOptions = {
-        redirectUri: window.location.origin + '/login',
-        prompt: 'login' // Force showing login form even if already authenticated
-      };
+      const data = await response.json();
       
-      console.log('Login options:', loginOptions);
+      // Store tokens in localStorage
+      localStorage.setItem('auth_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
       
-      // Call the Keycloak login method with options
-      await keycloak.login(loginOptions);
-      
-      // Return a basic response so TypeScript is happy
-      // This code likely won't execute due to the redirect
       return {
-        token: 'redirecting',
-        refreshToken: 'redirecting',
-        idToken: 'redirecting',
-        username: 'redirecting',
-        email: 'redirecting',
-        roles: [],
-        tokenParsed: {}
+        token: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresIn: data.expires_in,
+        tokenType: data.token_type,
       };
     } catch (error) {
-      console.error('Login error details:', error);
+      console.error('Login error:', error);
       throw error;
     }
   },
-  
-  logout: async (): Promise<void> => {
-    if (!keycloak) {
-      console.error('Keycloak not initialized');
-      return;
-    }
+
+  /**
+   * Logout the user by clearing tokens
+   */
+  logout: (): void => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('user');
     
-    try {
-      await keycloak.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw error;
-    }
+    // Redirect to login
+    window.location.href = '/login';
   },
-  
-  getToken: (): string | undefined => {
-    return keycloak?.token;
-  },
-  
-  updateToken: async (minValidity = 5): Promise<string> => {
-    if (!keycloak) {
-      throw new Error('Keycloak not initialized');
-    }
-    
-    try {
-      const refreshed = await keycloak.updateToken(minValidity);
-      console.log('Token refreshed:', refreshed);
-      return keycloak.token || '';
-    } catch (error) {
-      console.error('Failed to refresh token:', error);
-      // Force login when refresh fails
-      keycloak.login();
-      throw error;
-    }
-  },
-  
-  isAuthenticated: (): boolean => {
-    return !!keycloak?.authenticated;
-  },
-  
-  hasRole: (role: string): boolean => {
-    return keycloak?.hasRealmRole(role) || false;
-  },
-  
+
+  /**
+   * Get the user profile using the userinfo endpoint
+   */
   getUserProfile: async (): Promise<UserProfile> => {
-    if (!keycloak) {
-      throw new Error('Keycloak not initialized');
-    }
-    
     try {
-      const profile = await keycloak.loadUserProfile();
-      const roles = keycloak.realmAccess?.roles || [];
+      const token = localStorage.getItem('auth_token');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
+      const userInfoEndpoint = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/userinfo`;
+      
+      console.log('Fetching user profile with token:', token.substring(0, 10) + '...');
+      
+      const response = await fetch(userInfoEndpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('User info fetch failed:', response.status, errorText);
+        throw new Error(`Failed to retrieve user profile: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('User info response:', data);
       
       return {
-        id: keycloak.subject || '',
-        username: profile.username || '',
-        email: profile.email || '',
-        firstName: profile.firstName || '',
-        lastName: profile.lastName || '',
-        roles: roles
+        id: data.sub || '',
+        username: data.preferred_username || '',
+        email: data.email || '',
+        firstName: data.given_name || '',
+        lastName: data.family_name || '',
+        roles: data.realm_access?.roles || [],
       };
     } catch (error) {
-      console.error('Failed to load user profile:', error);
+      console.error('Get user profile error:', error);
       throw error;
     }
-  }
+  },
+
+  /**
+   * Check if the user is authenticated
+   */
+  isAuthenticated: (): boolean => {
+    return !!localStorage.getItem('auth_token');
+  },
+
+  /**
+   * Get the current token
+   */
+  getToken: (): string | null => {
+    return localStorage.getItem('auth_token');
+  },
+
+  /**
+   * Refresh the token
+   */
+  refreshToken: async (): Promise<AuthResponse> => {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      
+      if (!refreshToken) {
+        throw new Error('No refresh token found');
+      }
+      
+      const tokenEndpoint = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`;
+      
+      const formData = new URLSearchParams();
+      formData.append('grant_type', 'refresh_token');
+      formData.append('client_id', CLIENT_ID);
+      formData.append('refresh_token', refreshToken);
+      
+      const response = await fetch(tokenEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString(),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to refresh token');
+      }
+      
+      const data = await response.json();
+      
+      // Update tokens in localStorage
+      localStorage.setItem('auth_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      
+      return {
+        token: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresIn: data.expires_in,
+        tokenType: data.token_type,
+      };
+    } catch (error) {
+      console.error('Refresh token error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Check if token is valid
+   */
+  hasValidToken: (): boolean => {
+    const token = localStorage.getItem('auth_token');
+    return !!token;
+  },
 }; 

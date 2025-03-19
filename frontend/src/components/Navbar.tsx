@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, MouseEvent } from 'react'
 import { 
   AppBar, 
   Box, 
@@ -14,117 +14,214 @@ import {
   Drawer, 
   List, 
   ListItem, 
-  ListItemButton, 
+  ListItemButton,
+  ListItemIcon,
   ListItemText,
   Avatar,
   Tooltip,
-  Divider
+  Divider,
+  useTheme,
+  useMediaQuery
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
-import DarkModeIcon from '@mui/icons-material/DarkMode'
-import LightModeIcon from '@mui/icons-material/LightMode'
 import { usePathname, useRouter } from 'next/navigation'
-import { useSelector, useDispatch } from 'react-redux'
-import { RootState } from '@/store/store'
-import { logout } from '@/store/slices/authSlice'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
-import { AppDispatch } from '@/store'
+import HomeIcon from '@mui/icons-material/Home'
+import SchoolIcon from '@mui/icons-material/School'
+import AccountCircleIcon from '@mui/icons-material/AccountCircle'
+import LogoutIcon from '@mui/icons-material/Logout'
+import LoginIcon from '@mui/icons-material/Login'
+import PersonAddIcon from '@mui/icons-material/PersonAdd'
+import BookIcon from '@mui/icons-material/Book'
+import Logo from './Logo'
+
+// Define types for our menu items and event handlers
+type MenuItemType = {
+  text: string;
+  icon: JSX.Element;
+  path: string;
+  protected?: boolean;
+  authRequired?: boolean;
+};
 
 const navigationItems = [
-  { name: 'Home', href: '/' },
-  { name: 'Courses', href: '/courses' },
-  { name: 'Blog', href: '/blog' },
-  { name: 'About', href: '/about' },
+  { name: 'Home', href: '/', icon: <HomeIcon /> },
+  { name: 'Courses', href: '/courses', icon: <SchoolIcon /> },
+  { name: 'About', href: '/about', icon: null },
 ]
 
-export default function Navbar() {
+const Navbar = () => {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
-  const dispatch = useDispatch<AppDispatch>()
-  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth)
-  
-  // State for mobile drawer
-  const [mobileOpen, setMobileOpen] = useState(false)
-  
-  // State for user menu
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userInitial, setUserInitial] = useState('')
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const open = Boolean(anchorEl)
-  
-  // For client-side auth state detection
-  const [mounted, setMounted] = useState(false)
-  
+
+  // Check authentication status on component mount and when localStorage changes
   useEffect(() => {
-    setMounted(true)
+    const checkAuth = () => {
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
+      setIsAuthenticated(!!token)
+      
+      // Get user data and extract first letter of name or username
+      if (token) {
+        try {
+          const userData = localStorage.getItem('user')
+          if (userData) {
+            const user = JSON.parse(userData)
+            const initial = user.name || user.username || user.email || ''
+            setUserInitial(initial.charAt(0).toUpperCase())
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+          setUserInitial('U')
+        }
+      }
+    }
+    
+    // Initial check
+    checkAuth()
+    
+    // Listen for storage events to update auth state
+    window.addEventListener('storage', checkAuth)
+    
+    return () => {
+      window.removeEventListener('storage', checkAuth)
+    }
   }, [])
-  
+
   const handleDrawerToggle = () => {
-    setMobileOpen((prevState) => !prevState)
-  }
-
-  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const handleClose = () => {
-    setAnchorEl(null)
+    setDrawerOpen(!drawerOpen)
   }
 
   const handleLogout = () => {
-    handleClose()
-    dispatch(logout())
-    router.push('/login')
+    // Clear authentication tokens
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('refreshToken')
+    localStorage.removeItem('isAuthenticated')
+    localStorage.removeItem('user')
+    
+    // Also clear cookies
+    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
+    
+    // Trigger storage event for other components to detect auth change
+    window.dispatchEvent(new Event('storage'))
+    
+    // Redirect directly to home page instead of login
+    window.location.href = '/'
   }
 
-  const handleProfile = () => {
-    handleClose()
-    // Future implementation
-    console.log('Navigate to profile')
+  const handleLogin = () => {
+    // Use direct location change with bypass parameter to prevent middleware redirection
+    window.location.href = '/login?bypass_redirect=true'
   }
 
-  // Mobile menu component
+  const handleRegister = () => {
+    // Use direct location change with bypass parameter to prevent middleware redirection
+    window.location.href = '/register?bypass_redirect=true'
+  }
+
+  const handleNavigation = (path: string, isProtected: boolean = false) => {
+    // Close drawer if open (mobile)
+    if (drawerOpen) {
+      setDrawerOpen(false)
+    }
+    
+    // If trying to access protected route while not authenticated, go to login
+    if (isProtected && !isAuthenticated) {
+      router.push('/login')
+      return
+    }
+    
+    // For authenticated routes, use auth param
+    if (isProtected) {
+      window.location.href = `${path}?auth=true`
+      return
+    }
+    
+    // For non-protected routes, use router
+    router.push(path)
+  }
+
+  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleProfileMenuClose = () => {
+    setAnchorEl(null)
+  }
+
+  const handleProfileClick = () => {
+    handleProfileMenuClose()
+    handleNavigation('/profile', true)
+  }
+
+  // Public menu items always visible
+  const publicMenuItems: MenuItemType[] = [
+    { text: 'Home', icon: <HomeIcon />, path: '/' },
+    { text: 'Courses', icon: <SchoolIcon />, path: '/courses' },
+  ]
+  
+  // Protected menu items only visible when authenticated
+  const protectedMenuItems: MenuItemType[] = [
+    { text: 'My Learning', icon: <BookIcon />, path: '/my-courses', protected: true, authRequired: true },
+    { text: 'Profile', icon: <AccountCircleIcon />, path: '/profile', protected: true, authRequired: true },
+  ]
+  
+  // Get the appropriate menu items based on authentication status
+  const menuItems = [...publicMenuItems, ...(isAuthenticated ? protectedMenuItems : [])]
+
   const drawer = (
-    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center', py: 2 }}>
-      <Typography variant="h6" sx={{ my: 2, fontWeight: 700 }}>
-        E-LEARNING
-      </Typography>
+    <Box
+      sx={{ width: 250 }}
+      role="presentation"
+    >
+      <Box 
+        sx={{ p: 2, display: 'flex', justifyContent: 'center', cursor: 'pointer' }} 
+        onClick={() => handleNavigation('/')}
+      >
+        <Logo size="medium" />
+      </Box>
       <Divider />
       <List>
-        {navigationItems.map((item) => (
-          <ListItem key={item.name} disablePadding>
+        {menuItems.map((item) => (
+          <ListItem disablePadding key={item.text}>
             <ListItemButton 
-              sx={{ textAlign: 'center' }}
-              component={Link}
-              href={item.href}
-              className={cn(
-                "transition-colors",
-                pathname === item.href 
-                  ? "text-primary-main font-medium" 
-                  : "text-gray-700 hover:text-primary-main"
-              )}
+              onClick={() => handleNavigation(item.path, item.protected)}
+              selected={pathname === item.path}
             >
-              <ListItemText primary={item.name} />
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
             </ListItemButton>
           </ListItem>
         ))}
-        
-        {!isAuthenticated && (
+      </List>
+      <Divider />
+      <List>
+        {isAuthenticated ? (
+          <ListItem disablePadding>
+            <ListItemButton onClick={handleProfileClick}>
+              <ListItemIcon><AccountCircleIcon /></ListItemIcon>
+              <ListItemText primary="My Profile" />
+            </ListItemButton>
+          </ListItem>
+        ) : (
           <>
             <ListItem disablePadding>
-              <ListItemButton 
-                sx={{ textAlign: 'center' }}
-                component={Link}
-                href="/login"
-              >
+              <ListItemButton onClick={handleLogin}>
+                <ListItemIcon><LoginIcon /></ListItemIcon>
                 <ListItemText primary="Login" />
               </ListItemButton>
             </ListItem>
             <ListItem disablePadding>
-              <ListItemButton 
-                sx={{ textAlign: 'center' }}
-                component={Link}
-                href="/register"
-              >
+              <ListItemButton onClick={handleRegister}>
+                <ListItemIcon><PersonAddIcon /></ListItemIcon>
                 <ListItemText primary="Register" />
               </ListItemButton>
             </ListItem>
@@ -134,175 +231,164 @@ export default function Navbar() {
     </Box>
   )
 
-  // If not mounted yet, don't show auth-dependent UI to prevent hydration mismatch
-  if (!mounted) {
-    return (
-      <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: '1px solid #e0e0e0' }}>
+  return (
+    <>
+      <AppBar position="static" sx={{ backgroundColor: 'white', color: 'black', boxShadow: 1 }}>
         <Toolbar>
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              flexGrow: 1, 
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
+          {isMobile ? (
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
+          ) : null}
+          
+          <Box 
+            sx={{ flexGrow: isMobile ? 1 : 0, mr: 2, cursor: 'pointer' }} 
+            onClick={() => handleNavigation('/')}
           >
-            E-Learning Platform
-          </Typography>
+            <Logo size={isMobile ? 'small' : 'medium'} variant={isMobile ? 'compact' : 'full'} />
+          </Box>
+          
+          {!isMobile && (
+            <Box sx={{ flexGrow: 1, display: 'flex', gap: 2 }}>
+              {menuItems.map((item) => (
+                <Button 
+                  key={item.text}
+                  color="inherit" 
+                  startIcon={item.icon}
+                  onClick={() => handleNavigation(item.path, item.protected)}
+                  sx={{ 
+                    color: pathname === item.path ? theme.palette.primary.main : theme.palette.text.primary,
+                    '&:hover': {
+                      backgroundColor: theme.palette.primary.light,
+                      color: theme.palette.primary.contrastText,
+                    },
+                    position: 'relative',
+                    '&::after': pathname === item.path ? {
+                      content: '""',
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: '3px',
+                      backgroundColor: theme.palette.primary.main
+                    } : {}
+                  }}
+                >
+                  {item.text}
+                </Button>
+              ))}
+            </Box>
+          )}
+          
+          {!isMobile && (
+            <>
+              {isAuthenticated ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Tooltip title="Account settings">
+                    <IconButton
+                      onClick={handleProfileMenuOpen}
+                      size="small"
+                      sx={{ ml: 2 }}
+                      aria-controls={open ? 'account-menu' : undefined}
+                      aria-haspopup="true"
+                      aria-expanded={open ? 'true' : undefined}
+                    >
+                      <Avatar sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main }}>
+                        {userInitial || 'U'}
+                      </Avatar>
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button 
+                    color="inherit"
+                    onClick={handleLogin}
+                    startIcon={<LoginIcon />}
+                  >
+                    Login
+                  </Button>
+                  <Button 
+                    variant="contained"
+                    color="primary"
+                    onClick={handleRegister}
+                    startIcon={<PersonAddIcon />}
+                  >
+                    Register
+                  </Button>
+                </Box>
+              )}
+            </>
+          )}
         </Toolbar>
       </AppBar>
-    )
-  }
-
-  return (
-    <AppBar 
-      position="sticky" 
-      color="default" 
-      elevation={0}
-      sx={{ 
-        borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-        backgroundColor: 'background.paper',
-        color: 'text.primary',
-      }}
-    >
-      <Container maxWidth="lg">
-        <Toolbar>
-          {/* Mobile menu button */}
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          
-          {/* Logo */}
-          <Typography
-            variant="h6"
-            noWrap
-            component={Link}
-            href="/"
-            sx={{
-              mr: 2,
-              fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-              flexGrow: { xs: 1, sm: 0 }
-            }}
-            className="text-primary-main"
-          >
-            E-LEARNING
-          </Typography>
-          
-          {/* Desktop navigation */}
-          <Box sx={{ flexGrow: 1, display: { xs: 'none', sm: 'flex' }, ml: 4 }}>
-            {navigationItems.map((item) => (
-              <Button
-                key={item.name}
-                component={Link}
-                href={item.href}
-                sx={{ 
-                  my: 2, 
-                  display: 'block',
-                  mr: 1,
-                  color: pathname === item.href ? 'primary.main' : 'text.primary',
-                  fontWeight: pathname === item.href ? 'medium' : 'normal',
-                }}
-                className={cn(
-                  "transition-colors hover:text-primary-main",
-                  pathname === item.href && "border-b-2 border-primary-main"
-                )}
-              >
-                {item.name}
-              </Button>
-            ))}
-          </Box>
-          
-          {/* Auth buttons or user menu */}
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {isAuthenticated ? (
-              <>
-                <Tooltip title="Open user menu">
-                  <IconButton
-                    onClick={handleMenu}
-                    size="small"
-                    aria-controls={open ? 'account-menu' : undefined}
-                    aria-haspopup="true"
-                    aria-expanded={open ? 'true' : undefined}
-                  >
-                    <Avatar 
-                      alt={user?.username || 'User'} 
-                      sx={{ bgcolor: 'primary.main' }}
-                    >
-                      {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
-                    </Avatar>
-                  </IconButton>
-                </Tooltip>
-                <Menu
-                  sx={{ mt: '45px' }}
-                  id="menu-appbar"
-                  anchorEl={anchorEl}
-                  anchorOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                  keepMounted
-                  transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                  open={open}
-                  onClose={handleClose}
-                >
-                  <MenuItem onClick={handleProfile}>My Profile</MenuItem>
-                  <MenuItem onClick={handleLogout}>Logout</MenuItem>
-                </Menu>
-              </>
-            ) : (
-              <Box sx={{ display: { xs: 'none', sm: 'flex' } }}>
-                <Button 
-                  component={Link}
-                  href="/login"
-                  variant="text"
-                  sx={{ color: 'text.primary', mr: 1 }}
-                  className="hover:text-primary-main transition-colors"
-                >
-                  Login
-                </Button>
-                <Button
-                  component={Link}
-                  href="/register"
-                  variant="contained"
-                  color="primary"
-                  className="shadow-sm"
-                >
-                  Register
-                </Button>
-              </Box>
-            )}
-          </Box>
-        </Toolbar>
-      </Container>
       
-      {/* Mobile drawer */}
       <Drawer
         variant="temporary"
-        open={mobileOpen}
+        open={drawerOpen}
         onClose={handleDrawerToggle}
         ModalProps={{
-          keepMounted: true, // Better open performance on mobile
-        }}
-        sx={{
-          display: { xs: 'block', sm: 'none' },
-          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
+          keepMounted: true, // Better open performance on mobile.
         }}
       >
         {drawer}
       </Drawer>
-    </AppBar>
+
+      {/* Add profile menu */}
+      <Menu
+        anchorEl={anchorEl}
+        id="account-menu"
+        open={open}
+        onClose={handleProfileMenuClose}
+        onClick={handleProfileMenuClose}
+        PaperProps={{
+          elevation: 0,
+          sx: {
+            overflow: 'visible',
+            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+            mt: 1.5,
+            '& .MuiAvatar-root': {
+              width: 32,
+              height: 32,
+              ml: -0.5,
+              mr: 1,
+            },
+            '&:before': {
+              content: '""',
+              display: 'block',
+              position: 'absolute',
+              top: 0,
+              right: 14,
+              width: 10,
+              height: 10,
+              bgcolor: 'background.paper',
+              transform: 'translateY(-50%) rotate(45deg)',
+              zIndex: 0,
+            },
+          },
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <MenuItem onClick={handleProfileClick}>
+          <Avatar sx={{ bgcolor: theme.palette.primary.main }}>{userInitial || 'U'}</Avatar> My Profile
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleLogout}>
+          <ListItemIcon>
+            <LogoutIcon fontSize="small" />
+          </ListItemIcon>
+          Logout
+        </MenuItem>
+      </Menu>
+    </>
   )
-} 
+}
+
+export default Navbar 
